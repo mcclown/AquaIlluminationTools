@@ -18,7 +18,11 @@ function Create-ScriptEngine()
   }
 }
 
-$jsCode = 
+function Get-Checksum()
+{
+    param([Parameter(Mandatory=$true)][String]$checkStr)
+
+    $jsCode = 
 @"
 function getChecksum(l) {
         var k = 0;
@@ -37,9 +41,12 @@ function getChecksum(l) {
     };
 "@
 
-$js = Create-ScriptEngine "JScript" $jsCode
+    $js = Create-ScriptEngine "JScript" $jsCode
+
+    return $js.getChecksum($checkStr)
+}
 
 [xml]$xml = Get-Content -Path $inputAIPFile
 $colorsStr = [string]$xml.ramp.colors.OuterXml
 
-$js.getChecksum($colorsStr)
+Get-Checksum $colorsStr
