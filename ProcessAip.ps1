@@ -3,47 +3,24 @@
     [String]$inputAIPFile
     )
 
-function Create-ScriptEngine()
-{
-  param([string]$language = $null, [string]$code = $null);
-  if ( $language )
-  {
-    $sc = New-Object -ComObject ScriptControl;
-    $sc.Language = $language;
-    if ( $code )
-    {
-      $sc.AddCode($code);
-    }
-    $sc.CodeObject;
-  }
-}
-
 function Get-Checksum()
 {
-    param([Parameter(Mandatory=$true)][String]$checkStr)
+    param([String]$checkStr = $null)
 
-    $jsCode = 
-@"
-function getChecksum(l) {
-        var k = 0;
-        if (l.length == 0) {
-            return k
-        }
-        for (var j = 0; j < l.length; j++) {
-            var h = l.charCodeAt(j);
-            k = ((k << 5) - k) + h;
-            k = k & 4294967295
-        }
-        if (k < 0) {
-            k = ~k
-        }
-        return k
-    };
-"@
+    $x= 0
 
-    $js = Create-ScriptEngine "JScript" $jsCode
+    for($i = 0; $i -lt $checkStr.Length; $i++)
+    {
+        $charCode = [int][char]$checkStr[$i]
+        $x = (($x -shl 5) - $x ) + $charCode
 
-    return $js.getChecksum($checkStr)
+        $x = ($x -band 4294967295)
+
+        #Not pretty, the original algorithm assumes 32-bit ints, so this is a workaround, to handle that
+        $x = ($x -shl 32) -shr 32
+    } 
+
+    return [Math]::Abs($x) 
 }
 
 [xml]$xml = Get-Content -Path $inputAIPFile
