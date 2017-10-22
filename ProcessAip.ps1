@@ -4,7 +4,8 @@
     [Parameter(Position=2)]
     [String]$outFile = $null,
     [switch]$calculateChecksum,
-    [switch]$updateChecksum
+    [switch]$updateChecksum,
+    [int]$addMins = 0
     )
 
 function Format-XML
@@ -49,8 +50,36 @@ function Modify-Checksum
 {
     param([xml]$xml)
 
-    $checksum = Get-Checksum($xml)
+    $checksum = Get-Checksum $xml
     $xml.ramp.header.checksum = ""+$checksum
+    return $xml
+}
+
+function Add-Time
+{
+    param([xml]$xml, [int]$mins)
+
+    ForEach ($color  in $xml.ramp.colors.ChildNodes) 
+    { 
+        ForEach ($point in $color.ChildNodes) 
+        {
+            if(-not($point.Time -eq "0" -and $point.Intensity -eq "0"))
+            {
+                $tempTime = [int]$point.time
+                $tempTime += $mins
+                $tempTime %= 1440
+
+                if($tempTime -lt 0)
+                {
+                    #Combine with total minutes, per day, if the number is negative.
+                    $tempTime += 1440
+                }
+
+                $point.time = ""+$tempTime 
+            }
+        }
+    }
+
     return $xml
 }
 
@@ -62,11 +91,18 @@ function Modify-Checksum
 
 if( $calculateChecksum )
 {
-    Write-Output (Get-Checksum($xml))
+    Write-Output ( Get-Checksum $xml )
 }
 
 if( $updateChecksum )
 {
-    $outXML = Modify-Checksum($xml)
+    $outXML = Modify-Checksum $xml
     Format-XML($outXML) | Out-File -FilePath $outFile
+}
+
+if( $addMins -ne 0 )
+{
+    $outXML = Add-Time $xml $addMins
+    $outXML = Modify-Checksum $xml 
+    Format-XML $outXML | Out-File -FilePath $outFile
 }
